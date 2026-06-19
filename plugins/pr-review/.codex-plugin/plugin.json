@@ -1,0 +1,35 @@
+{
+  "name": "pr-review",
+  "version": "0.1.0",
+  "description": "Review GitHub pull requests with Claude Code or Codex reviewers on deterministic PR snapshots.",
+  "author": {
+    "name": "Shinsuke Kagawa",
+    "url": "https://github.com/shinpr"
+  },
+  "license": "MIT",
+  "keywords": [
+    "github",
+    "pull-request",
+    "code-review",
+    "codex",
+    "claude"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PR Review",
+    "shortDescription": "Review GitHub PRs from deterministic snapshots.",
+    "longDescription": "PR Review gathers GitHub pull request metadata, diffs, prior comments, and repository context into a repeatable snapshot, runs Claude Code or Codex reviewers, validates structured findings, and posts configurable PR comments after user approval.",
+    "developerName": "Shinsuke Kagawa",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Review this GitHub PR.",
+      "Review this PR and prepare must and should findings for posting.",
+      "Review this GitHub PR. Review only and leave the PR unchanged.",
+      "Create a quality profile for this repository."
+    ]
+  }
+}

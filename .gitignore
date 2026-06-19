@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+tmp/
+.claude/
+.agents/tmp/
+.agents/pr-review/
+.DS_Store
+*.log

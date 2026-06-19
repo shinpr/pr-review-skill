@@ -1,0 +1,18 @@
+version: 1
+posting:
+  severities:
+    - must
+    - should
+review:
+  default_engine: self
+  additional_engines: []
+  output_language: en
+quality:
+  path: .agents/pr-review/quality/code.yaml
+workspace:
+  tmp_dir: .agents/tmp/pr-review
+guidance:
+  include_files:
+    - AGENTS.md
+    - CLAUDE.md
+    - .github/copilot-instructions.md

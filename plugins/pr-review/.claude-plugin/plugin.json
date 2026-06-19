@@ -1,0 +1,17 @@
+{
+  "name": "pr-review",
+  "description": "Review GitHub pull requests with Claude Code or Codex reviewers on deterministic PR snapshots.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Shinsuke Kagawa",
+    "url": "https://github.com/shinpr"
+  },
+  "license": "MIT",
+  "keywords": [
+    "github",
+    "pull-request",
+    "code-review",
+    "codex",
+    "claude"
+  ]
+}
