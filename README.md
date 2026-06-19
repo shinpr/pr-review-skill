@@ -45,29 +45,13 @@ Then start a new Claude Code or Codex session so the installed skill is loaded.
 Claude Code uses slash commands:
 
 ```text
-/recipe-pr-review Review this PR.
-```
-
-```text
-/recipe-pr-review Review this PR and prepare must and should findings for posting.
-```
-
-```text
-/recipe-pr-review Review https://github.com/owner/repo/pull/123. Review only and leave the PR unchanged.
+/recipe-pr-review Review https://github.com/OWNER/REPO/pull/123.
 ```
 
 Codex uses skill invocation with `$`:
 
 ```text
-$recipe-pr-review Review this PR.
-```
-
-```text
-$recipe-pr-review Review this PR and prepare must and should findings for posting.
-```
-
-```text
-$recipe-pr-review Review https://github.com/owner/repo/pull/123. Review only and leave the PR unchanged.
+$recipe-pr-review Review https://github.com/OWNER/REPO/pull/123.
 ```
 
 The first run creates `.agents/pr-review/config.yaml` and an empty quality profile at `.agents/pr-review/quality/code.yaml` if they are missing. The plugin leaves repository ignore rules under your control.
