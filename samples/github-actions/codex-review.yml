@@ -1,0 +1,222 @@
+name: PR Review with Codex
+
+# Triggers:
+# - When a draft PR is marked ready for review.
+# - When an OWNER, MEMBER, or COLLABORATOR starts a PR comment with `/pr-review codex`.
+# - When manually started with workflow_dispatch.
+#
+# The issue_comment trigger runs in the base repository security context. Keep
+# reviewer scripts pinned to a trusted ref, and do not run code from the PR head.
+on:
+  pull_request:
+    types: [ready_for_review]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_url:
+        description: GitHub pull request URL to review
+        required: true
+      model:
+        description: Optional Codex model name
+        required: false
+        default: "gpt-5.4"
+      post_comments:
+        description: Post eligible comments to GitHub
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+  pull-requests: write
+  issues: write
+  statuses: read
+
+jobs:
+  review:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        startsWith(github.event.comment.body, '/pr-review codex') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: pr-review-codex-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+      cancel-in-progress: true
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_REVIEW_SKILL_REPO: ${{ vars.PR_REVIEW_SKILL_REPO || 'shinpr/pr-review-skill' }}
+      PR_REVIEW_SKILL_REF: ${{ vars.PR_REVIEW_SKILL_REF || 'v0.1.1' }}
+      PR_REVIEW_MODEL: ${{ inputs.model || vars.PR_REVIEW_CODEX_MODEL || 'gpt-5.4' }}
+      PR_REVIEW_POST_COMMENTS: ${{ inputs.post_comments || vars.PR_REVIEW_POST_COMMENTS || 'true' }}
+
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || (github.event.issue.pull_request && format('refs/pull/{0}/head', github.event.issue.number)) || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check out PR Review skill
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ${{ env.PR_REVIEW_SKILL_REPO }}
+          ref: ${{ env.PR_REVIEW_SKILL_REF }}
+          path: .agents/plugins/pr-review-skill
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install sandbox dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap apparmor-profiles apparmor-utils
+          sudo install -m 0644 \
+            /usr/share/apparmor/extra-profiles/bwrap-userns-restrict \
+            /etc/apparmor.d/bwrap-userns-restrict
+          sudo apparmor_parser -r /etc/apparmor.d/bwrap-userns-restrict
+
+      - name: Install Codex
+        run: npm install -g @openai/codex
+
+      - name: Resolve pull request URL
+        id: pr
+        env:
+          INPUT_PR_URL: ${{ inputs.pr_url }}
+        run: |
+          if [ -n "$INPUT_PR_URL" ]; then
+            pr_url="$INPUT_PR_URL"
+          elif [ -n "${{ github.event.issue.number }}" ]; then
+            pr_url="https://github.com/${{ github.repository }}/pull/${{ github.event.issue.number }}"
+          else
+            pr_url="${{ github.event.pull_request.html_url }}"
+          fi
+          if [ -z "$pr_url" ]; then
+            echo "Pull request URL is required." >&2
+            exit 1
+          fi
+          echo "url=$pr_url" >> "$GITHUB_OUTPUT"
+
+      - name: Review pull request
+        id: review
+        env:
+          CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+          MODEL: ${{ env.PR_REVIEW_MODEL }}
+          SKILL_DIR: .agents/plugins/pr-review-skill/plugins/pr-review/skills/recipe-pr-review
+        run: |
+          "$SKILL_DIR/scripts/bootstrap-config.py" --repo-root "$GITHUB_WORKSPACE"
+
+          context_json="$("$SKILL_DIR/scripts/collect-pr-context.py" --pr-url "$PR_URL")"
+          echo "$context_json"
+          context_dir="$(printf '%s' "$context_json" | python -c 'import json, sys; print(json.load(sys.stdin)["context_dir"])')"
+          echo "context_dir=$context_dir" >> "$GITHUB_OUTPUT"
+
+          review_args=(--context-dir "$context_dir" --engine codex)
+          if [ -n "$MODEL" ]; then
+            review_args+=(--model "$MODEL")
+          fi
+          raw_review_json="$("$SKILL_DIR/scripts/run-review.py" "${review_args[@]}" | python -c 'import json, sys; print(json.load(sys.stdin)["review_json"])')"
+          review_json="$context_dir/review-codex-normalized.json"
+          "$SKILL_DIR/scripts/normalize-review.py" \
+            --context-dir "$context_dir" \
+            --review-json "$raw_review_json" \
+            --out "$review_json"
+          echo "review_json=$review_json" >> "$GITHUB_OUTPUT"
+
+          "$SKILL_DIR/scripts/post-comments.py" --context-dir "$context_dir" --review-json "$review_json" --dry-run
+
+      - name: Summarize review result
+        if: always() && steps.review.outputs.review_json != ''
+        env:
+          REVIEW_JSON: ${{ steps.review.outputs.review_json }}
+        run: |
+          python - "$REVIEW_JSON" <<'PY'
+          import json
+          import sys
+          from collections import Counter
+
+          review = json.load(open(sys.argv[1]))
+          comments = review.get("inline_comments", []) + review.get("overall_comments", [])
+          counts = Counter(comment.get("severity") for comment in comments)
+          print(json.dumps({
+              "verdict": review.get("verdict"),
+              "confidence": review.get("confidence"),
+              "inline_comments": len(review.get("inline_comments", [])),
+              "overall_comments": len(review.get("overall_comments", [])),
+              "must": counts.get("must", 0),
+              "should": counts.get("should", 0),
+              "nit": counts.get("nit", 0),
+          }, ensure_ascii=False))
+          PY
+
+      - name: Capture review diagnostics
+        if: always() && steps.review.outputs.review_json != ''
+        env:
+          CONTEXT_DIR: ${{ steps.review.outputs.context_dir }}
+          REVIEW_JSON: ${{ steps.review.outputs.review_json }}
+        run: |
+          diagnostics_dir="$CONTEXT_DIR/diagnostics"
+          mkdir -p "$diagnostics_dir"
+
+          jq '{
+            owner,
+            repo,
+            number,
+            headRefOid: .pr.headRefOid,
+            baseRefOid: .pr.baseRefOid,
+            changed_files
+          }' "$CONTEXT_DIR/context.json" > "$diagnostics_dir/context-summary.json"
+
+          jq '{
+            verdict,
+            confidence,
+            inline_comments,
+            overall_comments
+          }' "$REVIEW_JSON" > "$diagnostics_dir/review-targets.json"
+
+      - name: Post eligible comments
+        if: env.PR_REVIEW_POST_COMMENTS == 'true'
+        env:
+          SKILL_DIR: .agents/plugins/pr-review-skill/plugins/pr-review/skills/recipe-pr-review
+          CONTEXT_DIR: ${{ steps.review.outputs.context_dir }}
+          REVIEW_JSON: ${{ steps.review.outputs.review_json }}
+        run: |
+          "$SKILL_DIR/scripts/post-comments.py" --context-dir "$CONTEXT_DIR" --review-json "$REVIEW_JSON"
+
+      - name: Upload review artifacts
+        if: always() && steps.review.outputs.context_dir != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-review-codex
+          path: |
+            ${{ steps.review.outputs.context_dir }}/context.json
+            ${{ steps.review.outputs.context_dir }}/diff.patch
+            ${{ steps.review.outputs.context_dir }}/review-codex.json
+            ${{ steps.review.outputs.context_dir }}/review-codex-normalized.json
+            ${{ steps.review.outputs.context_dir }}/diagnostics/context-summary.json
+            ${{ steps.review.outputs.context_dir }}/diagnostics/review-targets.json
+          if-no-files-found: ignore
+
+      - name: Clean up review artifacts
+        if: success() && env.PR_REVIEW_POST_COMMENTS == 'true' && steps.review.outputs.context_dir != ''
+        env:
+          SKILL_DIR: .agents/plugins/pr-review-skill/plugins/pr-review/skills/recipe-pr-review
+          CONTEXT_DIR: ${{ steps.review.outputs.context_dir }}
+        run: |
+          "$SKILL_DIR/scripts/cleanup-context.py" --context-dir "$CONTEXT_DIR"
