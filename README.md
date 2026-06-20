@@ -56,6 +56,39 @@ $recipe-pr-review Review https://github.com/OWNER/REPO/pull/123.
 
 The first run creates `.agents/pr-review/config.yaml` and an empty quality profile at `.agents/pr-review/quality/code.yaml` if they are missing. The plugin leaves repository ignore rules under your control.
 
+## GitHub Actions / CI
+
+Sample GitHub Actions workflows are available under `samples/github-actions/`:
+
+- `claude-code-review.yml` runs the Claude Code reviewer.
+- `codex-review.yml` runs the Codex reviewer.
+
+Copy one or both files into your repository's `.github/workflows/` directory and set the matching API key secret:
+
+- Claude Code: `ANTHROPIC_API_KEY`
+- Codex: `CODEX_API_KEY`
+
+The sample workflows intentionally avoid push-triggered reviews to keep CI cost predictable. They run when:
+
+- a draft PR is marked ready for review;
+- an `OWNER`, `MEMBER`, or `COLLABORATOR` starts a PR comment with `/pr-review claude` or `/pr-review codex`;
+- a maintainer starts the workflow manually with `workflow_dispatch`.
+
+The workflows fetch this plugin from `PR_REVIEW_SKILL_REPO` at `PR_REVIEW_SKILL_REF`, defaulting to `shinpr/pr-review-skill` and `v0.1.1`. Override these repository variables when testing a branch, a fork, or a newer release:
+
+```text
+PR_REVIEW_SKILL_REPO=OWNER/pr-review-skill
+PR_REVIEW_SKILL_REF=ci-workflow-experiment
+PR_REVIEW_CLAUDE_MODEL=sonnet
+PR_REVIEW_CODEX_MODEL=gpt-5.4
+PR_REVIEW_POST_COMMENTS=true
+CLAUDE_CODE_VERSION=2.1.183
+```
+
+The comment trigger uses the base repository security context and can access configured secrets. Treat PR content as untrusted input: keep the workflow scripts pinned to a trusted plugin ref, keep `persist-credentials: false`, and do not add steps that execute code from the PR head before the reviewer runs. The reviewer reads repository configuration from the checked-out PR snapshot, so review `.agents/pr-review/config.yaml` changes before invoking comment-triggered reviews on untrusted PRs.
+
+Each workflow uploads raw and normalized review artifacts for inspection. Successful posting cleans the temporary context directory from the runner after artifacts are uploaded.
+
 ## Configuration
 
 Repository settings live in `.agents/pr-review/config.yaml`. The file controls where review state is stored, which quality profile is loaded, which reviewer engines run, and which finding severities are eligible for GitHub posting.
@@ -140,3 +173,7 @@ project_rules:
 ```
 
 Rules describe repository-specific expectations that can be verified from the PR.
+
+## License
+
+MIT
