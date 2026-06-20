@@ -10,7 +10,7 @@ POST_COMMENTS = SCRIPTS_DIR / "post-comments.py"
 post_comments = load_script("post_comments", "post-comments.py")
 
 
-def test_post_comments_dry_run_uses_configured_severities_without_network(tmp_path):
+def test_post_comments_dry_run_ignores_question_posting_severity_without_network(tmp_path):
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
     config_path = tmp_path / ".agents/pr-review"
     config_path.mkdir(parents=True)
@@ -49,12 +49,13 @@ workspace:
         capture_output=True,
     )
     payload = json.loads(proc.stdout)
-    assert payload["posting_severities"] == ["question"]
-    assert payload["inline_comments"] == 1
-    assert payload["question"] == 1
+    assert payload["posting_severities"] == []
+    assert payload["inline_comments"] == 0
+    assert payload["question"] == 0
+    assert "COMMENT review has no postable findings" in proc.stderr
 
 
-def test_post_comments_dry_run_skips_overall_when_no_severities_match(tmp_path):
+def test_post_comments_dry_run_warns_when_comment_has_no_postable_findings(tmp_path):
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
     config_path = tmp_path / ".agents/pr-review"
     config_path.mkdir(parents=True)
@@ -96,6 +97,7 @@ workspace:
     assert payload["inline_comments"] == 0
     assert payload["overall_comments"] == 0
     assert payload["overall"] is None
+    assert "COMMENT review has no postable findings" in proc.stderr
 
 
 def test_post_comments_dry_run_includes_approve_summary(tmp_path):

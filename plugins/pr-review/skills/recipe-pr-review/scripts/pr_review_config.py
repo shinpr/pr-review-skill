@@ -161,7 +161,7 @@ def posting_severities(config: dict[str, Any]) -> set[str]:
     values = config.get("posting", {}).get("severities", ["must", "should"])
     if not isinstance(values, list):
         return {"must", "should"}
-    return {str(value) for value in values if str(value) in {"must", "should", "question", "nit"}}
+    return {str(value) for value in values if str(value) in {"must", "should", "nit"}}
 
 
 def output_language(config: dict[str, Any]) -> str:

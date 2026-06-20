@@ -9,7 +9,7 @@
       "name": "pr-review",
       "source": "./plugins/pr-review",
       "description": "Review GitHub pull requests with Claude Code or Codex reviewers on deterministic PR snapshots.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": {
         "name": "Shinsuke Kagawa",
         "url": "https://github.com/shinpr"

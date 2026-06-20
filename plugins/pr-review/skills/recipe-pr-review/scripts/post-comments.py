@@ -269,6 +269,7 @@ def post_inline(context: dict, review: dict, cwd: Path, existing_comments: dict[
 def post_overall(context: dict, review: dict, cwd: Path, issue_comments: list[dict], severities: set[str], inline_urls: dict[str, str], dry_run: bool) -> str | None:
     inline, overall = postable_comments(review, severities)
     if review["verdict"] != "APPROVE" and not inline and not overall:
+        print("warning: COMMENT review has no postable findings; run normalize-review.py before posting", file=sys.stderr)
         return None
     body = overall_body({**review, "commit_id": context["pr"]["headRefOid"]}, severities, inline_urls)
     key = f"{context['pr']['headRefOid']}:overall"

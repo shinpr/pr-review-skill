@@ -8,10 +8,10 @@ Use these labels in reviewer JSON:
 | --- | --- |
 | `must` | A bug, broken contract, security issue, data-loss risk, or merge-blocking quality gap. |
 | `should` | A strong recommendation that should be addressed before merge and remains below clear correctness-blocker severity. |
-| `question` | A code-backed concern that needs clarification before it can be treated as a recommendation. |
+| `question` | A raw reviewer concern that needs clarification before the orchestrator can treat it as a recommendation. |
 | `nit` | Minor cleanup, style, or maintainability note. |
 
-The configured `posting.severities` decides which labels are posted. The reviewer should emit all evidence-backed findings it identifies.
+The reviewer should emit all evidence-backed raw findings it identifies. The orchestrator normalizes raw findings against `posting.severities` before posting.
 
 ## Finding Structure
 
@@ -23,7 +23,7 @@ Each finding must include:
 4. `failure_scenario`: concrete failure or maintenance risk when available.
 5. `suggested_fix`: specific change when available.
 
-Use `null` for structured fields that are unavailable. Preserve the best supported severity instead of inflating severity to make a finding postable.
+Use `null` for structured fields that are unavailable. Preserve the best supported raw severity instead of inflating severity to make a finding postable.
 
 ## Granularity
 
@@ -41,4 +41,4 @@ Suppress repeat comments when a prior reviewer already raised the same issue and
 
 ## No Findings
 
-Set `verdict` to `APPROVE` when there are no evidence-backed findings at any severity.
+Set the raw reviewer `verdict` to `APPROVE` when there are no evidence-backed raw findings at any severity. The final posting verdict is determined after normalization.
