@@ -95,12 +95,12 @@ Write `suggested_fix` for downstream LLM repair as the complete fix contract: re
 
 For each finding, fill `evidence`, `failure_scenario`, and `suggested_fix` when concrete information is available. Use `null` when a field is not available.
 
-Represent uncertainty as `question` when code evidence supports a concern but the exact contract, failure scenario, or fix remains unclear.
+Represent uncertainty as `question` when code evidence supports a concern but the exact contract, failure scenario, or fix remains unclear. A `question` is raw reviewer output. The orchestrator may convert it to an actionable `should` finding or move it to `notes` during normalization.
 
 Use `notes` for brief review context that is not already captured by `quality_coverage`: key boundary dimensions considered, supported candidate failure points, and unavailable materials. On `APPROVE`, combine `quality_coverage` and `notes` as the evidence that changed surfaces and applicable quality criteria were covered.
 
 # Approval Policy
 
-Set `verdict` to `COMMENT` when there is at least one finding in `inline_comments[]` or `overall_comments[]`.
+Set the raw reviewer `verdict` to `COMMENT` when there is at least one raw finding in `inline_comments[]` or `overall_comments[]`.
 
-Set `verdict` to `APPROVE` only when no evidence-backed findings were identified.
+Set the raw reviewer `verdict` to `APPROVE` only when no evidence-backed raw findings were identified. The orchestrator computes the final posting verdict after question adjudication and posting-policy normalization.

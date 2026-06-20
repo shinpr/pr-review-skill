@@ -87,9 +87,9 @@ guidance:
 
 Before sending GitHub comments, the skill shows a posting summary and asks for approval.
 
-Change `posting.severities` to choose which of `must`, `should`, `question`, and `nit` are posted.
+Change `posting.severities` to choose which of `must`, `should`, and `nit` are posted.
 
-Reviewers may still produce findings outside this list. `posting.severities` is the posting cutoff, not the review cutoff. For example, the default posts only `must` and `should`; `question` and `nit` stay in the local review output.
+Reviewers may still produce raw findings outside this list. `question` is a raw reviewer concern that the orchestrator must either convert to `should` or move to notes before posting. For example, the default posts only `must` and `should`; unresolved questions and `nit` findings stay out of final posted findings.
 
 ### Review Engines
 

@@ -37,7 +37,7 @@ review:
     )
     assert cfg["posting"]["severities"] == ["must", "question"]
     assert cfg["review"]["output_language"] == "ja"
-    assert config.posting_severities(cfg) == {"must", "question"}
+    assert config.posting_severities(cfg) == {"must"}
 
 
 def test_bootstrap_creates_config_and_empty_quality(tmp_path):

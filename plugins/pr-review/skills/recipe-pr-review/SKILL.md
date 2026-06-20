@@ -12,7 +12,7 @@ Use this skill to review a GitHub pull request with deterministic context collec
 
 The skill reads configuration from `.agents/pr-review/config.yaml`. If the file is missing, bootstrap it from `references/default-config.yaml`. If the configured quality file is missing, bootstrap the empty placeholder from `references/default-quality.yaml`.
 
-The orchestrator owns setup, model selection, structure validation, posting eligibility, duplicate prevention, user-facing summaries, and cleanup. Code evidence and review judgment belong to isolated reviewers.
+The orchestrator owns setup, model selection, question adjudication, structure validation, posting eligibility, duplicate prevention, user-facing summaries, and cleanup. Code evidence and raw review judgment belong to isolated reviewers.
 
 Resolve `<skill_dir>` to this skill directory. Repository paths are relative to the target repository root.
 
@@ -24,7 +24,7 @@ Register this plan before running scripts:
 2. Bootstrap config and quality files when missing
 3. Collect deterministic PR context
 4. Run separate reviewer engines
-5. Combine reviewer output when multiple engines run and validate the final JSON
+5. Combine reviewer output when multiple engines run, normalize the final JSON, and validate it
 6. Before posting, summarize eligible comments and get user approval
 7. Clean successful run artifacts when posting succeeds
 8. Report review result and evidence
@@ -80,9 +80,9 @@ Claude reviewers run with `--permission-mode bypassPermissions` and write tools 
 
 When the host is Codex and the reviewer engine is Codex, read `references/codex.md` before running the command and start the nested reviewer with escalated sandbox permissions.
 
-### Step 5. Merge And Validate
+### Step 5. Merge, Normalize, And Validate
 
-When one engine ran, use that engine's review JSON.
+When one engine ran, use that engine's review JSON as raw reviewer output.
 
 When multiple engine outputs exist, the host agent reads the reviewer JSON files and writes `<context_dir>/review-merged.json`.
 
@@ -97,23 +97,36 @@ Merge contract:
 - Set `inspected.project_guidance` and `inspected.changed_files` to the union of reviewer outputs.
 - Set `inspected.prior_comments_considered` to the maximum reviewer value.
 - Preserve useful `suppressed_prior_comments` and `notes`.
-- Set `verdict` to `COMMENT` when findings remain; otherwise set it to `APPROVE`.
+- Set `verdict` from the raw reviewer findings before posting-policy normalization.
 - Set `confidence` to the lowest reviewer confidence.
 
-Validate the final review JSON:
+Question adjudication:
+
+- Treat `question` as a raw reviewer candidate, not a final posted finding.
+- In interactive skill runs, the orchestrator evaluates each `question` before posting. Convert it to `should` only when it can be restated as: "If this code path, runtime condition, or contract interpretation is true, this concrete failure can occur, so this specific fix or verification should be added." Move unresolved questions to `notes`.
+- In deterministic CI runs, resolve questions deterministically by moving all `question` findings to `notes` without invoking additional models.
+
+Normalize the review against the configured posting policy:
 
 ```bash
-<skill_dir>/scripts/guard-plugin/scripts/require-final-json.py --cli <review_json>
+<skill_dir>/scripts/normalize-review.py --context-dir <context_dir> --review-json <review_json> --out <normalized_review_json>
 ```
 
-When validation fails, stop and report the failure with the context directory.
+Normalization contract:
+
+- Move findings whose severities are not in `posting.severities` to `notes`.
+- Move unresolved `question` findings to `notes`.
+- Set `verdict` to `COMMENT` only when postable findings remain.
+- Set `verdict` to `APPROVE` when no postable findings remain; in that case `inline_comments` and `overall_comments` must be empty.
+
+The normalization script validates `<normalized_review_json>`. When validation fails, stop and report the failure with the context directory.
 
 ### Step 6. Post Comments
 
 Compute what can be posted:
 
 ```bash
-<skill_dir>/scripts/post-comments.py --context-dir <context_dir> --review-json <review_json> --dry-run
+<skill_dir>/scripts/post-comments.py --context-dir <context_dir> --review-json <normalized_review_json> --dry-run
 ```
 
 Report the posting summary:
@@ -131,17 +144,18 @@ Ask for user approval before posting GitHub comments.
 Posting command:
 
 ```bash
-<skill_dir>/scripts/post-comments.py --context-dir <context_dir> --review-json <review_json>
+<skill_dir>/scripts/post-comments.py --context-dir <context_dir> --review-json <normalized_review_json>
 ```
 
 Posting policy:
 
 - The configured `posting.severities` controls which severities are posted.
+- Raw reviewer JSON is never posted. Always pass the normalized final review JSON to posting commands.
 - Inline comments are posted as PR review comments when GitHub accepts them.
 - Overall comments are posted as PR issue comments.
 - `APPROVE` results post one overall approval summary even when there are no findings.
 - Duplicate markers prevent reposting the same generated comment.
-- For `COMMENT` results, when no findings match the configured severities, the script posts no review findings.
+- Final `COMMENT` results must contain at least one finding matching the configured severities. When no postable findings remain, normalize the review to `APPROVE` before posting.
 
 ### Step 7. Clean Up
 
