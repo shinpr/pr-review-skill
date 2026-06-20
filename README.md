@@ -173,3 +173,7 @@ project_rules:
 ```
 
 Rules describe repository-specific expectations that can be verified from the PR.
+
+## License
+
+MIT
