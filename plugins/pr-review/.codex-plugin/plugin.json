@@ -1,6 +1,6 @@
 {
   "name": "pr-review",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Review GitHub pull requests with Claude Code or Codex reviewers on deterministic PR snapshots.",
   "author": {
     "name": "Shinsuke Kagawa",

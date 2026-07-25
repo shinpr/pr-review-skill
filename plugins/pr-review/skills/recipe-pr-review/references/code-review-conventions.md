@@ -7,9 +7,9 @@ Use these labels in reviewer JSON:
 | Label | Meaning |
 | --- | --- |
 | `must` | A bug, broken contract, security issue, data-loss risk, or merge-blocking quality gap. |
-| `should` | A strong recommendation that should be addressed before merge and remains below clear correctness-blocker severity. |
+| `should` | An evidence-backed concrete risk or pre-merge obligation below clear correctness-blocker severity. |
 | `question` | A raw reviewer concern that needs clarification before the orchestrator can treat it as a recommendation. |
-| `nit` | Minor cleanup, style, or maintainability note. |
+| `nit` | Optional minor cleanup, style, readability, or maintainability without a concrete failure, risk, or pre-merge obligation. |
 
 The reviewer should emit all evidence-backed raw findings it identifies. The orchestrator normalizes raw findings against `posting.severities` before posting.
 
@@ -21,7 +21,7 @@ Each finding must include:
 2. `body`: concise explanation focused on the code issue.
 3. `evidence`: concrete code evidence when available.
 4. `failure_scenario`: concrete failure or maintenance risk when available.
-5. `suggested_fix`: specific change when available.
+5. `suggested_fix`: observable post-fix outcome and verification when available.
 
 Use `null` for structured fields that are unavailable. Preserve the best supported raw severity instead of inflating severity to make a finding postable.
 

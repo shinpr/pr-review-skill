@@ -55,7 +55,7 @@ Material kinds:
    - Check that applicable quality dimensions and project rules have repository evidence mapped to the changed surfaces they cover, and that the mapped evidence satisfies each criterion's `pass` statement when one exists, or the applicable general review obligation otherwise.
    - When one defect class is supported, look for other independently actionable instances on the same boundary before finalizing.
    - Preserve multiple supported failure points when they have different root causes or require different fixes.
-5. Convert supported candidate failure points to `inline_comments[]` or `overall_comments[]`.
+5. Classify supported candidate failure points under the Finding Policy and convert the resulting findings to `inline_comments[]` or `overall_comments[]`.
 6. Compare with prior comments and suppress repeated issues.
 7. Complete the review pass across all changed files before choosing final severities.
 8. Return JSON only.
@@ -87,17 +87,17 @@ Use severity definitions from the loaded `conventions` material, provided throug
 
 Place line-specific findings in `inline_comments[]` only when the target is a changed diff line that GitHub can accept as a PR review comment. Use the line number from the displayed diff target side (`RIGHT` for the head side, `LEFT` for the base side). Place cross-file, verification, repeated-pattern, unchanged-line, and non-line-specific findings in `overall_comments[]` with `paths` set to affected paths or `null`.
 
-Emit every evidence-backed `must`, `should`, `question`, and `nit` finding you identify. After finding a high-severity issue, continue checking remaining changed files, nearby contracts, and prior comments.
+Evaluate each evidence-backed candidate against the loaded severity definitions and emit it at the best supported raw severity. After finding a high-severity issue, continue checking remaining changed files, nearby contracts, and prior comments.
 
 Group findings by fix contract. Split findings when obligations can remain broken independently, belong to different owners, or need separate verification.
 
-Write `suggested_fix` for downstream LLM repair as the complete fix contract: required post-fix obligations and the verification expected for each. For boundary findings, derive those obligations from repository evidence, nearby implementations, quality profile rules, and tests. Cover boundary dimensions that can still violate the same contract after the obvious fix.
+Write `suggested_fix` for downstream LLM repair as the complete fix contract: required post-fix obligations and the verification expected for each. State the observable post-fix outcome, and require a specific implementation mechanism only when the applicable criterion or repository contract requires it. For boundary findings, derive those obligations from repository evidence, nearby implementations, quality profile rules, and tests. Cover boundary dimensions that can still violate the same contract after the obvious fix.
 
 For each finding, fill `evidence`, `failure_scenario`, and `suggested_fix` when concrete information is available. Use `null` when a field is not available.
 
-Represent uncertainty as `question` when code evidence supports a concern but the exact contract, failure scenario, or fix remains unclear. A `question` is raw reviewer output. The orchestrator may convert it to an actionable `should` finding or move it to `notes` during normalization.
+Represent uncertainty as `question` only when code evidence supports a concern but a fact, contract source, or human decision needed to determine the applicable obligation or triggering condition remains unresolved. Name that input in the finding; otherwise record the limitation in `notes`. A `question` is raw reviewer output. The orchestrator may convert it to an actionable `should` finding or move it to `notes` during normalization.
 
-Use `notes` for brief review context that is not already captured by `quality_coverage`: key boundary dimensions considered, supported candidate failure points, and unavailable materials. On `APPROVE`, combine `quality_coverage` and `notes` as the evidence that changed surfaces and applicable quality criteria were covered.
+Use `notes` for brief review context that is not already captured by `quality_coverage`: key boundary dimensions considered and material review limitations, including unavailable materials. On `APPROVE`, combine `quality_coverage` and `notes` as the evidence that changed surfaces and applicable quality criteria were covered.
 
 # Approval Policy
 
