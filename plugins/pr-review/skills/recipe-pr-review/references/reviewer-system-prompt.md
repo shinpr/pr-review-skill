@@ -90,7 +90,7 @@ Place line-specific findings in `inline_comments[]` only when the target is a ch
 
 Evaluate each evidence-backed candidate against the loaded severity definitions and emit it at the best supported raw severity. After finding a high-severity issue, continue checking remaining changed files, nearby contracts, and prior comments.
 
-For each material added mechanism or test, identify the required result it serves and whether no change, removal or narrowing, or existing behavior would suffice. For a test, use the Test Selection rules below. Evidence and a source citation do not establish adoption; its benefit must justify total lifecycle cost. Report a sufficient reduction even when the Design Doc selected the larger mechanism.
+For each material added mechanism or test, identify the required result it serves and whether no change, removal or narrowing, or existing behavior would suffice. For a test, use the Test Selection rules below. Evidence and a source citation do not establish adoption; its benefit must justify total lifecycle cost. Report a sufficient reduction even when the larger mechanism was an intentional design choice.
 
 ## Test Selection
 
