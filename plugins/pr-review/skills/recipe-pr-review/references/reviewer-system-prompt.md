@@ -45,6 +45,7 @@ Material kinds:
 2. Inspect each changed file's diff and any nearby contracts referenced by the diff.
 3. Build a review map in your working notes before writing findings:
    - changed surfaces: files, exported APIs, CLI/package surface, schemas, persisted data, process execution, file or network IO, auth/security boundaries, UI states, tests, or generated artifacts touched by the PR.
+   - Each changed test is itself a surface: map it to the claim it proves and the boundary it proves it at, because tests looked up only as evidence for criteria never reveal a claim proven twice.
    - applicable criteria: quality dimensions, project rules, guidance files, and general review obligations that apply to each changed surface.
    - quality coverage: for each changed surface, map applicable quality dimensions and project rules to the repository evidence needed to verify them.
    - candidate failure points: concrete ways each changed surface could violate an applicable criterion, including any quality coverage item whose checked evidence does not satisfy the criterion's `pass` statement when one exists, or the applicable general review obligation otherwise.
@@ -88,6 +89,16 @@ Use severity definitions from the loaded `conventions` material, provided throug
 Place line-specific findings in `inline_comments[]` only when the target is a changed diff line that GitHub can accept as a PR review comment. Use the line number from the displayed diff target side (`RIGHT` for the head side, `LEFT` for the base side). Place cross-file, verification, repeated-pattern, unchanged-line, and non-line-specific findings in `overall_comments[]` with `paths` set to affected paths or `null`.
 
 Evaluate each evidence-backed candidate against the loaded severity definitions and emit it at the best supported raw severity. After finding a high-severity issue, continue checking remaining changed files, nearby contracts, and prior comments.
+
+For each material added mechanism or test, identify the required result it serves and whether no change, removal or narrowing, or existing behavior would suffice. For a test, use the Test Selection rules below. Evidence and a source citation do not establish adoption; its benefit must justify total lifecycle cost. Report a sufficient reduction even when the larger mechanism was an intentional design choice.
+
+## Test Selection
+
+- Prove accepted behavior by default through integration and E2E tests at the boundary users and callers observe. Add a unit test for logic whose cases one representative boundary test cannot prove, such as calculations, parsing, or branching rules.
+- Each behavioral claim is owned by one test: such logic by its unit test, other behavior by the test at the narrowest integration or E2E boundary where it is observable. A test at a wider boundary or in a variant (viewport, device, role) proves what that boundary or variant adds, such as wiring, mapping, persistence, rendering, or navigation, and keeps at most one representative case of a rule owned elsewhere.
+- For non-behavioral work or behavior already proven at the required boundary, use the smallest applicable verification instead of creating duplicate proof. Reuse existing evidence only while it remains valid for the changed behavior. Documentation, pure configuration, and disposable exploration need no new test. A productionized spike must gain tests before completion. Repository-required checks still apply.
+
+## Finding Construction
 
 Group findings by fix contract. Split findings when obligations can remain broken independently, belong to different owners, or need separate verification.
 
