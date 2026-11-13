@@ -6,7 +6,7 @@ Use these labels in reviewer JSON:
 
 | Label | Meaning |
 | --- | --- |
-| `must` | A bug, broken contract, security issue, data-loss risk, or merge-blocking quality gap. |
+| `must` | A bug, broken contract, exploitable security vulnerability, data-loss risk, or merge-blocking quality gap. |
 | `should` | An evidence-backed concrete risk or pre-merge obligation below clear correctness-blocker severity. |
 | `question` | A raw reviewer concern that needs clarification before the orchestrator can treat it as a recommendation. |
 | `nit` | Optional minor cleanup, style, readability, or maintainability without a concrete failure, risk, or pre-merge obligation. |
@@ -31,14 +31,6 @@ Prefer one finding per fix contract. A fix contract is the set of post-fix oblig
 
 Group nearby issues when one fix contract resolves them. Split findings when obligations can remain broken independently, belong to different owners, or need separate verification. If one code line creates several boundary obligations that must be fixed together, group them in one finding and make `suggested_fix` list the complete post-fix obligations and verification.
 
-Use inline comments for issues anchored to changed lines. Use overall comments for cross-file contracts, missing verification, repeated patterns, and review limitations that create concrete risk.
-
 ## Prior Comments
 
-For re-review, read prior issue comments, review comments, and reviews before producing findings.
-
 Suppress repeat comments when a prior reviewer already raised the same issue and the current diff has the same evidence. Record suppressed comments in `suppressed_prior_comments`.
-
-## No Findings
-
-Set the raw reviewer `verdict` to `APPROVE` when there are no evidence-backed raw findings at any severity. The final posting verdict is determined after normalization.
