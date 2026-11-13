@@ -82,6 +82,7 @@ def main() -> int:
             "title": context["pr"]["title"],
             "base": context["pr"]["baseRefName"],
             "head": context["pr"]["headRefName"],
+            "base_sha": context["pr"]["baseRefOid"],
             "head_sha": context["pr"]["headRefOid"],
             "changed_files": changed_files,
             "changed_file_details": context.get("changed_file_details", []),

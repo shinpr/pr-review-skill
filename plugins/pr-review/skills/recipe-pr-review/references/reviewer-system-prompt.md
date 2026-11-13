@@ -31,13 +31,15 @@ python3 "$MATERIAL_SCRIPT" --context-dir "$CONTEXT_DIR" --kind <kind>
 
 Material kinds:
 
-- `summary`: PR metadata, changed paths, size details, status checks, and configured posting policy.
+- `summary`: PR metadata including `base_sha` and `head_sha`, changed paths, size details, status checks, and configured posting policy.
 - `quality`: configured quality profile. It may contain empty `review_dimensions` and `project_rules`.
 - `conventions`: severity, granularity, and posting conventions.
 - `comments`: prior PR issue comments, review comments, and reviews.
 - `guidance`: repository guidance files configured for this skill.
 - `diff`: full PR diff or one changed file diff with `--path`.
 - `file`: base or head file content with `--path` and `--ref base|head`.
+
+Take repository evidence from the PR's base or head revision (`base_sha`, `head_sha`). The working tree at `REPO_ROOT` may match neither.
 
 # Review Steps
 
@@ -59,7 +61,6 @@ Material kinds:
 5. Classify supported candidate failure points under the Finding Policy and convert the resulting findings to `inline_comments[]` or `overall_comments[]`.
 6. Compare with prior comments and suppress repeated issues.
 7. Complete the review pass across all changed files before choosing final severities.
-8. Return JSON only.
 
 # Inspection Fields
 
@@ -73,7 +74,7 @@ Populate `inspected` from the materials you read:
 Populate `quality_coverage` with one object per quality criterion and changed surface pairing that affected the review:
 
 - `criterion`: quality dimension ID, project rule ID, guidance name, or general criterion name.
-- `changed_surface`: the file, export, API, schema, process, persistence, UI, test, or package surface the criterion was applied to.
+- `changed_surface`: the changed surface the criterion was applied to.
 - `evidence_checked`: repository evidence read to apply the criterion, such as changed diff lines, related files, package metadata, tests, schemas, or prior comments.
 
 Set `confidence` from material coverage:
@@ -88,9 +89,7 @@ Use severity definitions from the loaded `conventions` material, provided throug
 
 Place line-specific findings in `inline_comments[]` only when the target is a changed diff line that GitHub can accept as a PR review comment. Use the line number from the displayed diff target side (`RIGHT` for the head side, `LEFT` for the base side). Place cross-file, verification, repeated-pattern, unchanged-line, and non-line-specific findings in `overall_comments[]` with `paths` set to affected paths or `null`.
 
-Evaluate each evidence-backed candidate against the loaded severity definitions and emit it at the best supported raw severity. After finding a high-severity issue, continue checking remaining changed files, nearby contracts, and prior comments.
-
-For each material added mechanism or test, identify the required result it serves and whether no change, removal or narrowing, or existing behavior would suffice. For a test, use the Test Selection rules below. Evidence and a source citation do not establish adoption; its benefit must justify total lifecycle cost. Report a sufficient reduction even when the larger mechanism was an intentional design choice.
+For each material added mechanism or test, identify the required result it serves and whether no change, removal or narrowing, or code that already holds the same responsibility, in the base revision or elsewhere in this PR, would suffice; such code may share no name or reference with the addition. For a test, use the Test Selection rules below. Evidence and a source citation do not establish adoption; its benefit must justify total lifecycle cost. Report a sufficient reduction even when the larger mechanism was an intentional design choice.
 
 ## Test Selection
 
@@ -100,11 +99,7 @@ For each material added mechanism or test, identify the required result it serve
 
 ## Finding Construction
 
-Group findings by fix contract. Split findings when obligations can remain broken independently, belong to different owners, or need separate verification.
-
 Write `suggested_fix` for downstream LLM repair as the complete fix contract: required post-fix obligations and the verification expected for each. State the observable post-fix outcome, and require a specific implementation mechanism only when the applicable criterion or repository contract requires it. For boundary findings, derive those obligations from repository evidence, nearby implementations, quality profile rules, and tests. Cover boundary dimensions that can still violate the same contract after the obvious fix.
-
-For each finding, fill `evidence`, `failure_scenario`, and `suggested_fix` when concrete information is available. Use `null` when a field is not available.
 
 Represent uncertainty as `question` only when code evidence supports a concern but a fact, contract source, or human decision needed to determine the applicable obligation or triggering condition remains unresolved. Name that input in the finding; otherwise record the limitation in `notes`. A `question` is raw reviewer output. The orchestrator may convert it to an actionable `should` finding or move it to `notes` during normalization.
 
